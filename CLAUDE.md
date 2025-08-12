@@ -4,60 +4,81 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Python inventory management application that tracks barcode-based inventory using ADD/REMOVE operations. The application logs all transactions to an Excel file and maintains running inventory counts for each barcode.
+This is a Flask-based web inventory management application that tracks barcode-based inventory using ADD/REMOVE operations. The application provides a web interface for data entry, real-time updates, database storage with SQLAlchemy, and Excel export functionality.
 
 ## Dependencies
 
-- **openpyxl**: Required for Excel file operations
-- Install with: `pip install openpyxl`
+Install all dependencies with:
+```bash
+pip install -r requirements.txt
+```
+
+Main dependencies:
+- **Flask**: Web framework
+- **Flask-SQLAlchemy**: Database ORM
+- **Flask-SocketIO**: Real-time WebSocket communication
+- **openpyxl**: Excel file operations
 
 ## Running the Application
 
 ```bash
-python main.py
+python app.py
 ```
 
-The application will:
-1. Create `inventory_log.xlsx` if it doesn't exist
-2. Prompt for operation mode (ADD or REMOVE)
-3. Start a continuous barcode scanning loop with 15-second timeout
-4. Track inventory counts and log all transactions
-5. Return to operation selection after 15 seconds of inactivity (does not exit)
-6. Exit only with Ctrl+C
+The web application will:
+1. Start Flask server on http://localhost:5000
+2. Create SQLite database (`inventory.db`) if it doesn't exist
+3. Migrate existing Excel data (`inventory_log.xlsx`) to database on startup
+4. Provide web interface for barcode scanning and inventory management
 
 ## Key Features
 
-- **Operation modes**: ADD (increase inventory) or REMOVE (decrease inventory)
-- **Inventory tracking**: Maintains running counts for each barcode
-- **Auto-timeout**: Returns to operation selection after 15 seconds of no input
-- **Persistent storage**: Loads existing inventory counts from Excel on startup
-- **Cross-platform timeout**: Windows-specific implementation using msvcrt, Unix fallback with signal
+- **Web Interface**: Modern responsive web UI for barcode operations
+- **Real-time Updates**: Live inventory updates using WebSocket connections
+- **Operation Modes**: ADD (increase inventory) or REMOVE (decrease inventory)
+- **Database Storage**: SQLite database with SQLAlchemy ORM
+- **Excel Export**: Download current inventory as Excel file
+- **Data Migration**: Automatically imports existing Excel data to database
+- **Statistics Dashboard**: Real-time inventory statistics
 
 ## Architecture
 
-- **Single file application**: `main.py` contains all functionality
-- **Excel logging**: Uses openpyxl to maintain persistent inventory totals in `inventory_log.xlsx` (updates existing rows instead of appending)
-- **In-memory tracking**: Dictionary-based inventory count management
-- **Timeout handling**: Platform-specific input timeout implementation
-- **Error handling**: KeyboardInterrupt and timeout handling for clean shutdown
+- **Flask Web Application**: `app.py` contains all backend functionality
+- **SQLite Database**: Persistent storage using SQLAlchemy ORM
+- **Real-time Communication**: WebSocket support via Flask-SocketIO
+- **Web Interface**: HTML template with JavaScript for interactive UI
+- **Data Migration**: Automatic import from existing Excel files
 
-## Excel File Structure
+## Database Schema
 
-The generated `inventory_log.xlsx` contains columns:
-- **Barcode**: The scanned barcode (unique identifier)
-- **Total Count**: Current total inventory count for this barcode
-- **Last Updated**: Timestamp of the last transaction for this barcode
+The SQLite database contains an `Inventory` table with:
+- **id**: Primary key (auto-increment)
+- **barcode**: Unique barcode identifier
+- **total_count**: Current inventory count for this barcode
+- **last_updated**: Timestamp of last transaction
+
+## API Endpoints
+
+- **GET /**: Main web interface
+- **GET /api/inventory**: JSON list of all inventory items
+- **POST /api/scan**: Process barcode scan (ADD/REMOVE operations)
+- **GET /api/export**: Download Excel export of current inventory
 
 ## File Structure
 
-- `main.py`: Main application script
-- `inventory_log.xlsx`: Generated Excel file containing inventory logs (created automatically)
+- `app.py`: Main Flask application
+- `templates/index.html`: Web interface template
+- `requirements.txt`: Python dependencies
+- `inventory.db`: SQLite database (created automatically)
+- `inventory_log.xlsx`: Legacy Excel file (migrated to database on startup)
+- `main.py`: Original command-line version (legacy)
 
 ## Development Notes
 
 - No build process required - direct Python execution
 - No test framework currently implemented
-- Application loads existing inventory counts on startup
+- Database automatically created on first run
+- Legacy Excel data automatically migrated to database
 - Inventory counts cannot go below 0 (REMOVE operations are clamped)
-- Each barcode's total count is immediately updated in Excel to prevent data loss
-- Excel file maintains one row per unique barcode with running totals
+- Real-time updates broadcast to all connected web clients
+- Excel exports include current timestamp in filename
