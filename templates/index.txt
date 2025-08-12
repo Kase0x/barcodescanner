@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% set active_page = "index" %}
+{% block title %}Nezus - Diff Form{% endblock%}
+
+
+
+{% block notify %}
+
+<div class="d-flex align-items-center p-3 my-3 text-purple-emphasis rounded shadow-sm bg-purple ">
+    <img class="me-3" src="{{url_for('static', filename='images/icon-transparent.png')}}" alt="" height="38">
+    <div class="lh-1">
+      <h1 class="h6 mb-0 text-purple-emphasis lh-1">Autosubmit Update!</h1>
+      <small>Automatic Daily Diff/Dispatch is now live! </br>
+      A Fresh database has been setup and is recording setting preferences moving forward.</br>
+      This means you need to hit <strong>Start</strong> with your desired settings at least once before trying to enable autosubmit! </br></br>
+      <strong>If you ever need to update the settings to change start & stop time or differential type just update them and hit start again. All automatic submissions will use the last set of settings.</strong></br>
+      Your current settings are as displayed below without URL modifiers (i.e. when only "https://form.nezus.net/" is in the URL field) . 
+      </small>
+
+    </div>
+    
+  </div>
+
+  
+
+
+{% endblock%}
+{% block content %}
+<style>
+    /* .left {text-align: left !important;} */
+table{border-spacing: 10px;border-collapse: unset;}
+    .tableP {text-align:left;margin-bottom: 0 ;}
+   .tableThRight{text-align:right}
+   th {text-align:left}
+   td:empty{border-right: 10px solid transparent;}
+   .form-check-input:checked , .form-check-label::before {box-shadow: unset;
+    background-color: #3d0631; /* Change the color of the toggle when it is checked */
+    border-color: #3d0631; /* Change the border color of the toggle when it is checked */
+}
+.form-check-input:active , .form-check-label::before {box-shadow: unset !important;
+}
+.form-switch {box-shadow: unset !important;}
+.form-check-input:focus {
+    box-shadow: unset !important;
+    border-color: #495057;
+}
+
+</style>
+
+
+
+<div class="my-3 p-3 bg-body rounded shadow-sm">
+    <h6 class="border-bottom pb-2 mb-0">Daily Differential Form</h6>
+    <div class="d-flex text-body-secondary pt-3">
+        
+    </div>
+<!-- <p>{{webTxt}} </p> -->
+
+
+<form action="{{ url_for('index') }}" method="POST" enctype="multipart/form-data" onsubmit="loading();" >
+    <div style="width:fit-content;margin:auto">
+    <table>
+        <tr>
+            <th>
+                <p class="tableP">Name:</p>
+                    <!-- <input type="text" name ="username" value="{{defaultName}}" required/></p> -->
+            </th>
+            <th>{{form.username(class_="btn btn-dark dropdown-toggle")}}</th>
+            <!-- <th></th> -->
+            <th colspan="2"><div class="form-check form-switch" style="width: 50px;">
+                <input class="form-check-input toggle" type="checkbox" role="switch" id="flexSwitchCheckDefault" name="diffCheck" {% if diffCheck == "on" %} checked {% else %} {%endif%}>
+                <label class="form-check-label status" for="flexSwitchCheckDefault" style="font-weight: normal;">{% if diffCheck == "on" %}Dispatch{% else %}Differential{%endif%}</label>
+              </div>
+              <script>
+                $(document).ready(function() {
+                 $('.toggle').click(function() {
+                    var current_status = $('.status').text();
+                    if (current_status === 'Dispatch'){
+                       $('.status').html('Differential');
+                    }else {
+                      $('.status').html('Dispatch');
+                    }
+              
+                  });
+                 });
+                 console.log("{{authentikName}}")
+               </script>
+            </th>
+
+            <th  class="tableThRight"><input name="submit" type="submit" value ="Start" class="btn btn-dark" id="liveAlertBtn" /></th>
+        </tr>
+        <tr>
+            <td ><p class="tableP">Start Date:</p></td>
+            <td ><input type="date" name="startDateForm" value="{{startDate}}" max="{{today}}" required class="btn btn-dark"></td>
+            <td ></td>
+            <td class="tableThRight"><p class="tableP">Start Time:  </p></td>
+            <td class="tableThRight"><input type="time" name="startTimeForm" value="{{start}}" required class="btn btn-dark"></td>
+        </tr>
+        <tr>    
+            <td > <p class="tableP">End Date: </p></td>
+            <td><input type="date" name="endDateForm" value="{{endDate}}" max="{{today}}" required class="btn btn-dark"></td>
+            <td></td>
+            <td class="tableThRight"><p class="tableP">End Time: </p></td>
+            <td class="tableThRight"><input type="time" name="endTimeForm" value="{{stop}}" required class="btn btn-dark"></td>
+        </tr>
+    </table>
+    </div>
+</form>
+
+    <!-- <small class="d-block text-end mt-3">
+      <a href="#">All updates</a>
+    </small> -->
+</div>
+
+
+<div class="my-3 p-3 bg-body rounded shadow-sm">
+    <h6 class="border-bottom pb-2 mb-0">Auto Submit Form</h6>
+    <div class="d-flex text-body-secondary pt-3">
+        
+    </div>
+
+    <form action="{{ url_for('autosubmit') }}" method="POST" enctype="multipart/form-data" onsubmit="loading();" >
+        <div style="width:fit-content;margin:auto">
+        <table>
+            <tr>
+                <th ><div class="form-check form-switch">
+                    <input class="form-check-input toggleAutoSubmit " type="checkbox" role="switch" id="flexSwitchCheckAutoSubmit" name="autosubmitCheck" {% if autosubmitCheck == "on" %} checked {% else %} {%endif%}>
+                    <label class="form-check-label statusAutoSubmit" for="flexSwitchCheckAutoSubmit" style="font-weight: normal;width:fit-content">{% if autosubmitCheck == "on" %}Enabled{% else %}Disabled{%endif%}</label>
+                  </div>
+                  <script>
+                    $(document).ready(function() {
+                     $('.toggleAutoSubmit').click(function() {
+                        var current_status = $('.statusAutoSubmit').text();
+                        if (current_status === 'Enabled'){
+                           $('.statusAutoSubmit').html('Disabled');
+                        }else {
+                          $('.statusAutoSubmit').html('Enabled');
+                        }
+                      });
+                     });
+                   </script>
+                </th>
+                <th  class="tableThRight"><input name="save" type="submit" value ="Save" class="btn btn-dark" id="liveAlertBtn" /></th>
+            </tr>
+            <tr>
+                <td colspan="2">{{authentikName}} is currently set to {% if autosubmitCheck != "on" %}<strong>NOT</strong>{%endif%} auto submit daily.</td>
+            </tr>
+        </table>
+        </div>
+    </form>
+    <small class="d-block text-end mt-3">
+      Daily form is submitted at a random time between 5:00 and 5:20 PM everyday.
+    </small>
+</div>
+<!-- <div class="my-3 p-3 bg-body rounded shadow-sm">
+    <h6 class="border-bottom pb-2 mb-0">Test</h6>
+    <div class="d-flex text-body-secondary pt-3">
+        
+    </div>
+<p>test</p>
+    <small class="d-block text-end mt-3">
+      <a href="#">All updates</a>
+    </small>
+</div> -->
+
+
+
+
+
+{% endblock%}
+
+
+{% block extracontent %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    {% for category,msg in messages %}
+    <div class="container"  style="width: fit-content;">
+        <div  class="alert {{category}} alert-dismissible fade show " role="alert">
+
+            <div>
+            {% for line in msg %}
+             {% if loop.index0  == 0 and loop.length > 1 %}
+             <strong>{{line}}</strong><br>
+             {%else%}
+            {{line}}<br>
+            {% endif%}
+            {% endfor %}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    {% endfor %}
+
+{% endif %}
+{% endwith%}
+
+
+{% endblock %}
