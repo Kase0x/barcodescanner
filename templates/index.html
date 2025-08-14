@@ -318,6 +318,7 @@
                 <input type="text" id="barcodeInput" placeholder="Scan or type barcode here" autofocus>
                 <button onclick="submitBarcode()" class="btn btn-dark">Submit</button>
                 <button class="btn btn-bd-primary" onclick="exportExcel()">📥 Export Excel</button>
+                <button class="btn btn-danger" onclick="clearDatabase()">🗑️ Clear Database</button>
             </div>
             
             <div id="currentOperation" style="margin-top: 10px; font-weight: bold; color: #007bff;">
@@ -395,6 +396,13 @@
             showStatus(`Operation changed to ${data.operation}`, 'success');
         });
 
+        socket.on('database_cleared', function(data) {
+            inventory = [];
+            updateInventoryTable();
+            updateStats();
+            showStatus(`Database cleared successfully. ${data.deleted_count} entries removed.`, 'success');
+        });
+
         function checkOperationStatus() {
             fetch('/api/status')
                 .then(response => response.json())
@@ -464,7 +472,7 @@
                 showStatus('Please enter a barcode or operation (ADD/REMOVE)', 'error');
                 return;
             }
-
+            
             fetch('/api/scan', {
                 method: 'POST',
                 headers: {
@@ -491,10 +499,12 @@
                     barcodeInput.focus();
                 } else {
                     if (data.timeout) {
+                        barcodeInput.value = '';
                         showStatus('⏰ ' + data.error, 'error');
                         currentOperation = null;
                         updateOperationDisplay();
                     } else {
+                        barcodeInput.value = '';
                         showStatus(data.error || 'Operation failed', 'error');
                     }
                 }
@@ -560,6 +570,35 @@
 
         function exportExcel() {
             window.open('/api/export', '_blank');
+        }
+
+        function clearDatabase() {
+            if (confirm('⚠️ WARNING: This will permanently delete ALL inventory data from the database.\n\nThis action cannot be undone!\n\nAre you sure you want to continue?')) {
+                if (confirm('Final confirmation: Delete ALL inventory data?')) {
+                    fetch('/api/clear-database', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            confirmed: true
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Database cleared event will be handled by socket
+                            showStatus(data.message, 'success');
+                        } else {
+                            showStatus(data.error || 'Failed to clear database', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showStatus('Network error occurred while clearing database', 'error');
+                    });
+                }
+            }
         }
     </script>
 

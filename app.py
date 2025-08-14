@@ -50,8 +50,8 @@ def get_status():
         requires_operation = True
     else:
         elapsed = datetime.utcnow() - last_operation_time
-        time_remaining = max(0, 15 - elapsed.total_seconds())
-        requires_operation = elapsed > timedelta(seconds=15)
+        time_remaining = max(0, 300 - elapsed.total_seconds())
+        requires_operation = elapsed > timedelta(seconds=300)
     
     return jsonify({
         'last_operation_time': last_operation_time.isoformat() if last_operation_time else None,
@@ -85,8 +85,8 @@ def scan_barcode():
             'message': f'Operation changed to {barcode_input}'
         })
     
-    # Check if more than 15 seconds have passed since last operation
-    if last_operation_time is None or (datetime.utcnow() - last_operation_time) > timedelta(seconds=15):
+    # Check if more than 300 seconds have passed since last operation
+    if last_operation_time is None or (datetime.utcnow() - last_operation_time) > timedelta(seconds=300):
         return jsonify({
             'error': 'Operation timeout. Please enter ADD or REMOVE first.',
             'timeout': True,
@@ -164,6 +164,31 @@ def export_excel():
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/clear-database', methods=['POST'])
+def clear_database():
+    try:
+        # Get confirmation from request
+        data = request.json
+        if not data or not data.get('confirmed'):
+            return jsonify({'error': 'Confirmation required'}), 400
+        
+        # Clear all inventory entries
+        deleted_count = Inventory.query.count()
+        Inventory.query.delete()
+        db.session.commit()
+        
+        # Emit update to all connected clients
+        socketio.emit('database_cleared', {'deleted_count': deleted_count})
+        
+        return jsonify({
+            'success': True,
+            'message': f'Database cleared successfully. {deleted_count} entries removed.',
+            'deleted_count': deleted_count
+        })
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 def migrate_existing_data():
