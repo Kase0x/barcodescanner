@@ -235,4 +235,4 @@ if __name__ == '__main__':
         db.create_all()
         migrate_existing_data()
     
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, allow_unsafe_werkzeug=True , host='0.0.0.0', port=5000)

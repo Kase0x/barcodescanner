@@ -113,8 +113,12 @@
       .bg-dark{opacity: .95; background-color: rgb(22, 22, 22) !important;}
       .text-purple-emphasis{color: #dddae4 }/*#9860ff */
       .bg-purple {background-color: #3d0631}
+      .nav-pills .nav-link{ font-family: var(--bs-body-font-family);}
+
       .nav-pills .nav-link.active, 
-      .nav-pills .show>.nav-link{background-color: #3d0631;--bs-nav-hover-bg:#9d7ae4}
+      .nav-pills .show>.nav-link{
+        background-color: #3d0631;
+        --bs-nav-hover-bg: #9d7ae4; font-family: var(--bs-body-font-family);}
       .nav{ 
         --bs-nav-link-color:#dddae4;
         --bs-nav-link-hover-color:#bb1196 !important; }
@@ -155,24 +159,9 @@
     }
     /* div#pageindex{display: none;} */
     div.hidden{display: none;}
-    
-        body {
-            font-family: Arial, sans-serif;
 
-            
-            color: #e0e0e0;
-        }
-
-        h1 {
-            text-align: center;
-            color: #ffffff;
-            margin-bottom: 30px;
-        }
-        h2 {
-            color: #ffffff;
-        }
         .scanner-section {
-            background: #2d2d2d;
+            /* background: #2d2d2d; */
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 30px;
@@ -347,7 +336,7 @@
             </div>
         </div>
         
-        <h2>Current Inventory</h2>
+        <h4>Current Inventory</h4>
         <table class="inventory-table">
             <thead>
                 <tr>
