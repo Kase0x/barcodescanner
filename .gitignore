@@ -1,4 +1,5 @@
-.claude
-inventory_log.xlsx
 CLAUDE.md
-instance/
+*.xlsx
+*.vscode
+*.db
+.env
