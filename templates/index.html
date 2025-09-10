@@ -198,6 +198,11 @@
             border-bottom: 1px solid #404040;
             color: #e0e0e0;
         }
+        .inventory-table td:nth-child(2) {
+            max-width: 300px;
+            word-wrap: break-word;
+            font-size: 14px;
+        }
         .inventory-table th {
             background-color: #2d2d2d;
             font-weight: bold;
@@ -341,6 +346,7 @@
             <thead>
                 <tr>
                     <th>Barcode</th>
+                    <th>Description</th>
                     <th>Count</th>
                     <th>Last Updated</th>
                 </tr>
@@ -530,6 +536,7 @@
                 const row = tbody.insertRow();
                 row.innerHTML = `
                     <td>${item.barcode}</td>
+                    <td>${item.description || 'No description available'}</td>
                     <td>${item.total_count}</td>
                     <td>${item.last_updated}</td>
                 `;

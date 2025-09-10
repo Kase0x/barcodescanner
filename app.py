@@ -6,6 +6,7 @@ import openpyxl
 from openpyxl import Workbook
 import os
 import tempfile
+import csv
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -18,18 +19,23 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Global variable to track last operation time for timeout
 last_operation_time = None
 
+# Global dictionary to store item descriptions from CSV
+descriptions_cache = {}
+
 class Inventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     barcode = db.Column(db.String(100), unique=True, nullable=False)
     total_count = db.Column(db.Integer, default=0, nullable=False)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    description = db.Column(db.String(500), nullable=True)
     
     def to_dict(self):
         return {
             'id': self.id,
             'barcode': self.barcode,
             'total_count': self.total_count,
-            'last_updated': self.last_updated.strftime("%Y-%m-%d %H:%M:%S")
+            'last_updated': self.last_updated.strftime("%Y-%m-%d %H:%M:%S"),
+            'description': self.description or 'No description available'
         }
 
 @app.route('/')
@@ -103,8 +109,13 @@ def scan_barcode():
     # Find or create inventory item
     item = Inventory.query.filter_by(barcode=barcode).first()
     if not item:
-        item = Inventory(barcode=barcode, total_count=0)
+        # Look up description from cache
+        description = descriptions_cache.get(barcode, None)
+        item = Inventory(barcode=barcode, total_count=0, description=description)
         db.session.add(item)
+    elif not item.description and barcode in descriptions_cache:
+        # Update existing item with description if it doesn't have one
+        item.description = descriptions_cache[barcode]
     
     # Update count based on operation
     if operation == 'ADD':
@@ -141,7 +152,7 @@ def export_excel():
         ws.title = "Inventory"
         
         # Add headers
-        ws.append(["Barcode", "Total Count", "Last Updated"])
+        ws.append(["Barcode", "Total Count", "Last Updated", "Description"])
         
         # Add data
         items = Inventory.query.all()
@@ -149,7 +160,8 @@ def export_excel():
             ws.append([
                 item.barcode,
                 item.total_count,
-                item.last_updated.strftime("%Y-%m-%d %H:%M:%S")
+                item.last_updated.strftime("%Y-%m-%d %H:%M:%S"),
+                item.description or 'No description available'
             ])
         
         # Save to temporary file
@@ -191,6 +203,43 @@ def clear_database():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+def load_descriptions():
+    """Load item descriptions from InvDesc.csv into cache"""
+    global descriptions_cache
+    csv_file = 'instance/InvDesc.csv'
+    
+    if os.path.exists(csv_file):
+        try:
+            with open(csv_file, 'r', encoding='utf-8-sig', newline='') as file:
+                csv_reader = csv.DictReader(file)
+                for row in csv_reader:
+                    item_id = row.get('Item ID', '').strip()
+                    description = row.get('Item Description', '').strip()
+                    if item_id and description:
+                        descriptions_cache[item_id] = description
+            print(f"Loaded {len(descriptions_cache)} descriptions from {csv_file}")
+        except Exception as e:
+            print(f"Error loading descriptions: {e}")
+    else:
+        print(f"Description file {csv_file} not found")
+
+def migrate_database_schema():
+    """Add description column to existing database if it doesn't exist"""
+    try:
+        # Check if description column exists
+        with db.engine.connect() as conn:
+            conn.execute(db.text("SELECT description FROM inventory LIMIT 1"))
+        print("Description column already exists")
+    except Exception:
+        # Column doesn't exist, add it
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text("ALTER TABLE inventory ADD COLUMN description VARCHAR(500)"))
+                conn.commit()
+            print("Added description column to database")
+        except Exception as e:
+            print(f"Error adding description column: {e}")
+
 def migrate_existing_data():
     """Migrate data from existing Excel file to SQLite database"""
     excel_file = 'inventory_log.xlsx'
@@ -216,12 +265,18 @@ def migrate_existing_data():
                 # Check if item already exists
                 existing_item = Inventory.query.filter_by(barcode=barcode).first()
                 if not existing_item:
+                    # Look up description from cache
+                    description = descriptions_cache.get(barcode, None)
                     item = Inventory(
                         barcode=barcode,
                         total_count=count,
-                        last_updated=timestamp
+                        last_updated=timestamp,
+                        description=description
                     )
                     db.session.add(item)
+                elif not existing_item.description and barcode in descriptions_cache:
+                    # Update existing item with description if it doesn't have one
+                    existing_item.description = descriptions_cache[barcode]
         
         try:
             db.session.commit()
@@ -232,7 +287,11 @@ def migrate_existing_data():
 
 if __name__ == '__main__':
     with app.app_context():
+        # Load descriptions first
+        load_descriptions()
         db.create_all()
+        # Migrate database schema to add description column if needed
+        migrate_database_schema()
         migrate_existing_data()
     
     socketio.run(app, allow_unsafe_werkzeug=True , host='0.0.0.0', port=5000)
