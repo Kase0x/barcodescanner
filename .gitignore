@@ -3,3 +3,5 @@ CLAUDE.md
 *.vscode
 *.db
 .env
+__pycache__/
+*.pyc
