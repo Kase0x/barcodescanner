@@ -178,6 +178,42 @@ def export_excel():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/edit-quantity', methods=['POST'])
+def edit_quantity():
+    try:
+        data = request.json
+        barcode = data.get('barcode', '').strip()
+        new_quantity = data.get('quantity')
+        
+        if not barcode:
+            return jsonify({'error': 'Barcode is required'}), 400
+        
+        if new_quantity is None or not isinstance(new_quantity, int) or new_quantity < 0:
+            return jsonify({'error': 'Valid quantity (non-negative integer) is required'}), 400
+        
+        # Find the inventory item
+        item = Inventory.query.filter_by(barcode=barcode).first()
+        if not item:
+            return jsonify({'error': 'Item not found'}), 404
+        
+        # Update the quantity
+        item.total_count = new_quantity
+        item.last_updated = datetime.utcnow()
+        
+        db.session.commit()
+        
+        # Emit real-time update to all connected clients
+        socketio.emit('inventory_update', item.to_dict())
+        
+        return jsonify({
+            'success': True,
+            'item': item.to_dict(),
+            'message': f'Quantity updated for {barcode}'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/clear-database', methods=['POST'])
 def clear_database():
     try:

@@ -273,6 +273,47 @@
             font-weight: bold;
             color: #0084ff;
         }
+        .editable-quantity {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .editable-quantity:hover {
+            background-color: #404040;
+        }
+        .quantity-input {
+            background: #2d2d2d;
+            border: 1px solid #0084ff;
+            color: #e0e0e0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 80px;
+            text-align: center;
+        }
+        .edit-buttons {
+            margin-left: 8px;
+        }
+        .edit-buttons button {
+            background: none;
+            border: none;
+            color: #0084ff;
+            cursor: pointer;
+            padding: 2px 6px;
+            margin: 0 2px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .edit-buttons button:hover {
+            background-color: #404040;
+        }
+        .edit-buttons .save-btn {
+            color: #22c55e;
+        }
+        .edit-buttons .cancel-btn {
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -537,7 +578,11 @@
                 row.innerHTML = `
                     <td>${item.barcode}</td>
                     <td>${item.description || 'No description available'}</td>
-                    <td>${item.total_count}</td>
+                    <td>
+                        <span class="editable-quantity" onclick="editQuantity('${item.barcode}', ${item.total_count}, this)" title="Click to edit">
+                            ${item.total_count}
+                        </span>
+                    </td>
                     <td>${item.last_updated}</td>
                 `;
             });
@@ -566,6 +611,108 @@
 
         function exportExcel() {
             window.open('/api/export', '_blank');
+        }
+
+        function editQuantity(barcode, currentQuantity, element) {
+            // Don't allow editing if already editing
+            if (element.querySelector('.quantity-input')) {
+                return;
+            }
+            
+            // Create input field
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.className = 'quantity-input';
+            input.value = currentQuantity;
+            
+            // Create buttons container
+            const buttonsContainer = document.createElement('span');
+            buttonsContainer.className = 'edit-buttons';
+            
+            // Create save button
+            const saveBtn = document.createElement('button');
+            saveBtn.innerHTML = '✓';
+            saveBtn.className = 'save-btn';
+            saveBtn.title = 'Save';
+            saveBtn.onclick = () => saveQuantity(barcode, input.value, element);
+            
+            // Create cancel button
+            const cancelBtn = document.createElement('button');
+            cancelBtn.innerHTML = '✕';
+            cancelBtn.className = 'cancel-btn';
+            cancelBtn.title = 'Cancel';
+            cancelBtn.onclick = () => cancelEdit(element, currentQuantity);
+            
+            buttonsContainer.appendChild(saveBtn);
+            buttonsContainer.appendChild(cancelBtn);
+            
+            // Replace the content
+            element.innerHTML = '';
+            element.appendChild(input);
+            element.appendChild(buttonsContainer);
+            
+            // Focus and select the input
+            input.focus();
+            input.select();
+            
+            // Handle Enter key to save
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveQuantity(barcode, input.value, element);
+                }
+            });
+            
+            // Handle Escape key to cancel
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    cancelEdit(element, currentQuantity);
+                }
+            });
+        }
+        
+        function saveQuantity(barcode, newQuantity, element) {
+            const quantity = parseInt(newQuantity);
+            
+            if (isNaN(quantity) || quantity < 0) {
+                showStatus('Please enter a valid non-negative number', 'error');
+                return;
+            }
+            
+            fetch('/api/edit-quantity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    barcode: barcode,
+                    quantity: quantity
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update will be handled by socket event
+                    showStatus(data.message, 'success');
+                } else {
+                    showStatus(data.error || 'Failed to update quantity', 'error');
+                    // Restore original content on error
+                    updateInventoryTable();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showStatus('Network error occurred while updating quantity', 'error');
+                // Restore original content on error
+                updateInventoryTable();
+            });
+        }
+        
+        function cancelEdit(element, originalQuantity) {
+            element.innerHTML = originalQuantity;
+            element.onclick = function() {
+                editQuantity(element.parentElement.parentElement.cells[0].textContent, originalQuantity, element);
+            };
         }
 
         function clearDatabase() {
